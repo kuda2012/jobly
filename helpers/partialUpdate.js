@@ -12,10 +12,12 @@
  *
  */
 
-function sqlForPartialUpdate(table, items, key, id) {
+const db = require("../db");
+
+async function sqlForPartialUpdate(table, items, key, id) {
   // keep track of item indexes
   // store all the columns we want to update and associate with vals
-
+  debugger;
   let idx = 1;
   let columns = [];
 
@@ -32,13 +34,22 @@ function sqlForPartialUpdate(table, items, key, id) {
   }
 
   // build query
-  let cols = columns.join(", ");
-  let query = `UPDATE ${table} SET ${cols} WHERE ${key}=$${idx} RETURNING *`;
-
   let values = Object.values(items);
   values.push(id);
+  console.log([...values]);
+  let cols = columns.join(", ")
+  let query = await db.query(
+    `UPDATE ${table} SET ${cols} WHERE ${key}=$${idx} RETURNING *`,
+    [...values]
+  );
 
   return { query, values };
 }
 
+sqlForPartialUpdate(
+  "companies",
+  { handle: "kro", name: "kroger", num_employees: 2923098 },
+  "name",
+  "Walmart"
+);
 module.exports = sqlForPartialUpdate;
