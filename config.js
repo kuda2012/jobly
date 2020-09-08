@@ -23,5 +23,5 @@ if (process.env.NODE_ENV === "test") {
 module.exports = {
   SECRET_KEY,
   PORT,
-  DB_URI
+  DB_URI,
 };
