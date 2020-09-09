@@ -13,85 +13,49 @@
  */
 
 const db = require("../db");
-
+const expressError = require("./expressError");
+const ExpressError = require("./expressError");
 async function sqlForPartialUpdate(table, items, key, id) {
-  // keep track of item indexes
-  // store all the columns we want to update and associate with vals
-  debugger;
-  let idx = 1;
-  let columns = [];
+  try {
+    // keep track of item indexes
+    // store all the columns we want to update and associate with vals
+    let idx = 1;
+    let columns = [];
 
-  // filter out keys that start with "_" -- we don't want these in DB
-  for (let key in items) {
-    if (key.startsWith("_")) {
-      delete items[key];
+    // filter out keys that start with "_" -- we don't want these in DB
+    for (let key in items) {
+      if (key.startsWith("_")) {
+        delete items[key];
+      }
+    }
+
+    for (let column in items) {
+      columns.push(`${column}=$${idx}`);
+      idx += 1;
+    }
+
+    // build query
+    let values = Object.values(items);
+    values.push(id);
+    let cols = columns.join(", ");
+    let query = await db.query(
+      `UPDATE ${table} SET ${cols} WHERE ${key}=$${idx} RETURNING *`,
+      [...values]
+    );
+
+    return { query, values };
+  } catch (error) {
+    if (error.code == "23505") {
+      throw new ExpressError("A company has already taken this handle", 409);
     }
   }
-
-  for (let column in items) {
-    columns.push(`${column}=$${idx}`);
-    idx += 1;
-  }
-
-  // build query
-  let cols = columns.join(", ");
-  let query = await db.query(
-    `UPDATE ${table} SET ${cols} WHERE ${key}=$${idx} RETURNING *`,
-    [items[key], id]
-  );
-
-  let values = Object.values(items);
-  values.push(id);
-
-  return { query, values };
 }
-
-sqlForPartialUpdate(
-  "companies",
-  {
-    name: "footlocker",
-  },
-  "name",
-  "kroger"
-);
-
-// async function sqlForPartialUpdate(table, items, key, id) {
-//   // keep track of item indexes
-//   // store all the columns we want to update and associate with vals
-//   debugger;
-//   let idx = 1;
-//   let columns = [];
-
-//   // filter out keys that start with "_" -- we don't want these in DB
-//   for (let key in items) {
-//     if (key.startsWith("_")) {
-//       delete items[key];
-//     }
-//   }
-
-//   for (let column in items) {
-//     columns.push(`${column}=$${idx}`);
-//     idx += 1;
-//   }
-
-//   // build query
-//   let values = Object.values(items);
-//   values.push(id);
-//   console.log([...values]);
-//   let cols = columns.join(", ");
-//   let query = await db.query(
-//     `UPDATE ${table} SET ${cols} WHERE ${key}=$${idx} RETURNING *`,
-//     [...values]
-//   );
-
-//   return { query, values };
-// }
 
 // sqlForPartialUpdate(
 //   "companies",
 //   { handle: "kro", name: "kroger", num_employees: 2923098 },
-//   "name",
-//   "Walmart"
+//   "handle",
+//   "fl"
 // );
 
 module.exports = sqlForPartialUpdate;
