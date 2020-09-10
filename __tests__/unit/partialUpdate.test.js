@@ -28,7 +28,8 @@ VALUES ('kro', 'kroger',3232982,'Cheap groceries', 'kroger.com') RETURNING *
   afterEach(async () => {
     await db.query(`DELETE FROM companies`);
   });
-  afterAll(async () => {
-    await db.end();
-  });
+});
+
+afterAll(async () => {
+  await db.end();
 });

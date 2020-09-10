@@ -2,8 +2,11 @@ const express = require("express");
 const router = new express.Router();
 const db = require("../db");
 const ExpressError = require("../helpers/expressError");
-const { SECRET_KEY } = require("../config");
+const jsonschema = require("jsonschema");
+const companySchema = require("../schema/companySchema.json");
+const companySchemaPatch = require("../schema/companySchemaPatch.json");
 const Company = require("../models/company");
+const { isEqual } = require("lodash");
 
 const sqlForPartialUpdate = require("../helpers/partialUpdate");
 
@@ -30,32 +33,71 @@ router.get("/:handle", async (req, res, next) => {
 });
 router.post("/", async (req, res, next) => {
   try {
-    const newCompany = new Company();
-    const companies = await newCompany.create(req.body);
-    return res.json({ company: companies });
+    const result = jsonschema.validate(req.body, companySchema);
+    if (result.valid) {
+      for (let key in result.instance) {
+        if (!companySchema.examples[0].hasOwnProperty(key)) {
+          throw new ExpressError(
+            `${key} is not a valid property for a company`,
+            400
+          );
+        }
+      }
+      const checkIfAlreadyExist = await Company.getOne(req.body.name);
+      if (checkIfAlreadyExist) {
+        throw new ExpressError("This company already exists", 409);
+      }
+
+      const newCompany = new Company();
+      const companies = await newCompany.create(req.body);
+      return res.json({ company: companies });
+    } else {
+      const listOfErrors = result.errors.map((error) => error.stack);
+      const err = new ExpressError(listOfErrors, 400);
+      return next(err);
+    }
   } catch (error) {
     next(error);
   }
 });
 router.patch("/:handle", async (req, res, next) => {
   try {
-    const { handle } = req.params;
-    const checkIfExist = await Company.getOne(handle);
-    if (checkIfExist) {
-      if (req.body.handle == checkIfExist.handle) {
-        delete req.body.handle;
-      } else if (req.body.name == checkIfExist.name) {
-        delete req.body.name;
+    const result = jsonschema.validate(req.body, companySchemaPatch);
+    if (result.valid) {
+      for (let key in result.instance) {
+        if (!companySchemaPatch.examples[0].hasOwnProperty(key)) {
+          throw new ExpressError(
+            `${key} is not a valid property for a company`,
+            400
+          );
+        }
       }
-      const company = await sqlForPartialUpdate(
-        "companies",
-        req.body,
-        "handle",
-        handle
-      );
-      return res.json({ updated_company: company.query.rows[0] });
+      const { handle } = req.params;
+      const checkIfExist = await Company.getOne(handle);
+      if (checkIfExist) {
+        if (Object.keys(req.body).length == 0) {
+          return res.json({ msg: "Company unchanged", company: checkIfExist });
+        }
+        const company = await sqlForPartialUpdate(
+          "companies",
+          req.body,
+          "handle",
+          handle
+        );
+        if (isEqual(company.query.rows[0], checkIfExist)) {
+          return res.json({
+            msg: "Company unchanged",
+            company: checkIfExist,
+          });
+        }
+        return res.json({ updated_company: company.query.rows[0] });
+      } else {
+        throw new ExpressError("This company does not exist", 404);
+      }
     } else {
-      throw new ExpressError("This company does not exist", 404);
+      const listOfErrors = result.errors.map((error) => error.stack);
+      const err = new ExpressError(listOfErrors, 400);
+      return next(err);
     }
   } catch (error) {
     next(error);
@@ -69,7 +111,7 @@ router.delete("/:handle", async (req, res, next) => {
       const deleteCompany = new Company();
       const deletedCompany = await deleteCompany.delete(handle);
       return res.json({
-        message: `The company by the name of ${deletedCompany.name} has been deleted`,
+        msg: `The company by the name of ${deletedCompany.name} has been deleted`,
       });
     } else {
       throw new ExpressError("This company does not exist", 404);
