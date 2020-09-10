@@ -64,9 +64,14 @@ class Company {
   }
   static async getOne(handle) {
     const getCompany = await db.query(
-      `SELECT * FROM COMPANIES WHERE handle = $1`,
+      `SELECT * FROM companies WHERE handle = $1`,
       [handle]
     );
+    const getCompanyJobs = await db.query(
+      `SELECT * FROM jobs WHERE company_handle = $1`,
+      [handle]
+    );
+    getCompany.rows[0].jobs = getCompanyJobs.rows;
     return getCompany.rows[0];
   }
   async create(body) {
