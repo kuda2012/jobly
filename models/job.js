@@ -5,6 +5,12 @@ class Job {
   static async getAll(column) {
     const jobTitle = "%" + column.title + "%";
     let jobs;
+    if (Number(column.min_equity) < 0 || Number(column.min_equity) > 1) {
+      throw new ExpressError(
+        "min_equity must be between 0 and 1, inclusive",
+        400
+      );
+    }
     if (column.title && column.min_salary && column.min_equity) {
       jobs = await db.query(
         `SELECT * FROM jobs WHERE title ILIKE $1 AND salary >= $2 AND equity >= $3`,

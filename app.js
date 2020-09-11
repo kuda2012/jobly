@@ -18,9 +18,11 @@ app.use(morgan("tiny"));
 
 const companiesRoutes = require("./routes/companies");
 const jobRoutes = require("./routes/jobs");
+const userRoutes = require("./routes/users");
 
 app.use("/companies", companiesRoutes);
 app.use("/jobs", jobRoutes);
+app.use("/users", userRoutes);
 
 app.use(function (req, res, next) {
   const err = new ExpressError("Not Found", 404);

@@ -1,11 +1,11 @@
 const db = require("../../db");
 const sqlForPartialUpdate = require("../../helpers/partialUpdate");
 
-describe("partialUpdate()", () => {
+describe("sqlForPartialUpdate() Updates desired columns in a record with passed in items", () => {
   let company;
   beforeEach(async () => {
     await db.query(`DELETE FROM companies`);
-    company = await db.query(`
+    company = await db.query(` 
 INSERT INTO companies (handle, name, num_employees, description, logo_url)
 VALUES ('kro', 'kroger',3232982,'Cheap groceries', 'kroger.com') RETURNING *
 `);

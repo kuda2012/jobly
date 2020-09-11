@@ -34,20 +34,15 @@ router.get("/:handle", async (req, res, next) => {
 router.post("/", async (req, res, next) => {
   try {
     const result = jsonschema.validate(req.body, companySchema);
+    for (let key in result.instance) {
+      if (!companySchema.examples[0].hasOwnProperty(key)) {
+        throw new ExpressError(
+          `${key} is not a valid property for a company`,
+          400
+        );
+      }
+    }
     if (result.valid) {
-      for (let key in result.instance) {
-        if (!companySchema.examples[0].hasOwnProperty(key)) {
-          throw new ExpressError(
-            `${key} is not a valid property for a company`,
-            400
-          );
-        }
-      }
-      const checkIfAlreadyExist = await Company.getOne(req.body.name);
-      if (checkIfAlreadyExist) {
-        throw new ExpressError("This company already exists", 409);
-      }
-
       const newCompany = new Company();
       const companies = await newCompany.create(req.body);
       return res.json({ company: companies });
@@ -63,15 +58,15 @@ router.post("/", async (req, res, next) => {
 router.patch("/:handle", async (req, res, next) => {
   try {
     const result = jsonschema.validate(req.body, companySchemaPatch);
-    if (result.valid) {
-      for (let key in result.instance) {
-        if (!companySchemaPatch.examples[0].hasOwnProperty(key)) {
-          throw new ExpressError(
-            `${key} is not a valid property for a company`,
-            400
-          );
-        }
+    for (let key in result.instance) {
+      if (!companySchemaPatch.examples[0].hasOwnProperty(key)) {
+        throw new ExpressError(
+          `${key} is not a valid property for a company`,
+          400
+        );
       }
+    }
+    if (result.valid) {
       const { handle } = req.params;
       const checkIfExist = await Company.getOne(handle);
       if (checkIfExist) {
@@ -84,6 +79,7 @@ router.patch("/:handle", async (req, res, next) => {
           "handle",
           handle
         );
+        company.query.rows[0].jobs = checkIfExist.jobs;
         if (isEqual(company.query.rows[0], checkIfExist)) {
           return res.json({
             msg: "Company unchanged",

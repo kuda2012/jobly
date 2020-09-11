@@ -20,6 +20,9 @@ router.get("/", async (req, res, next) => {
 router.get("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
+    if (isNaN(id)) {
+      throw new ExpressError("Please make sure id is an integer", 400);
+    }
     const checkIfExist = await Job.getOne(id);
     if (checkIfExist) {
       return res.json({ job: checkIfExist });
@@ -34,15 +37,12 @@ router.get("/:id", async (req, res, next) => {
 router.post("/", async (req, res, next) => {
   try {
     const result = jsonschema.validate(req.body, jobSchema);
-    if (result.valid) {
-      for (let key in result.instance) {
-        if (!jobSchema.examples[0].hasOwnProperty(key)) {
-          throw new ExpressError(
-            `${key} is not a valid property for a job`,
-            400
-          );
-        }
+    for (let key in result.instance) {
+      if (!jobSchema.examples[0].hasOwnProperty(key)) {
+        throw new ExpressError(`${key} is not a valid property for a job`, 400);
       }
+    }
+    if (result.valid) {
       const newJob = new Job();
       const job = await newJob.create(req.body);
       return res.json({ job });
@@ -59,16 +59,16 @@ router.post("/", async (req, res, next) => {
 router.patch("/:id", async (req, res, next) => {
   try {
     const result = jsonschema.validate(req.body, jobSchemaPatch);
-    if (result.valid) {
-      for (let key in result.instance) {
-        if (!jobSchemaPatch.examples[0].hasOwnProperty(key)) {
-          throw new ExpressError(
-            `${key} is not a valid property for a job`,
-            400
-          );
-        }
+    for (let key in result.instance) {
+      if (!jobSchemaPatch.examples[0].hasOwnProperty(key)) {
+        throw new ExpressError(`${key} is not a valid property for a job`, 400);
       }
+    }
+    if (result.valid) {
       const { id } = req.params;
+      if (isNaN(id)) {
+        throw new ExpressError("Please make sure id is an integer", 400);
+      }
       const checkIfExist = await Job.getOne(id);
       if (checkIfExist) {
         if (Object.keys(req.body).length == 0) {

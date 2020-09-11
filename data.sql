@@ -23,6 +23,16 @@ CREATE TABLE jobs (
      CHECK (equity <=1 AND equity >= 0)
 );
 
+CREATE TABLE users (
+    username TEXT PRIMARY KEY,
+    password TEXT NOT NULL,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    photo_url text,
+    is_admin BOOLEAN DEFAULT FALSE
+);
+
 
 INSERT INTO companies (handle, name, num_employees, description, logo_url)
 VALUES ('kro', 'kroger',3232982,'Cheap groceries', 'kroger.com');
@@ -30,3 +40,6 @@ VALUES ('kro', 'kroger',3232982,'Cheap groceries', 'kroger.com');
 
 INSERT INTO jobs (title, salary, equity, company_handle)
 VALUES ('bagger', 20000.75,.01,'kro');
+
+INSERT INTO users (username, password, first_name, last_name, email, photo_url)
+VALUES('kudaman', 'password1', 'Kuda', 'Mwakutuya', 'kuda2012@gmail.com', 'http://kuda.com');
