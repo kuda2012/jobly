@@ -7,6 +7,17 @@ const userSchema = require("../schema/userSchema.json");
 const userSchemaPatch = require("../schema/userSchemaPatch.json");
 const sqlForPartialUpdate = require("../helpers/partialUpdate");
 const User = require("../models/user");
+const { isEqual } = require("lodash");
+const jwt = require("jsonwebtoken");
+
+router.post("/login", async (req, res, next) => {
+  try {
+    const loginSuccessful = await User.getLoggedIn(req.body);
+    return res.json({ token: loginSuccessful });
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.post("/", async (req, res, next) => {
   try {
@@ -21,8 +32,9 @@ router.post("/", async (req, res, next) => {
       const checkIfEmailTaken = await User.getEmail(req.body.email);
       if (!checkIfUsernameTaken && !checkIfEmailTaken) {
         const newUser = new User();
-        const user = await newUser.create(req.body);
-        return res.json({ user: user });
+        await newUser.create(req.body);
+        const token = await User.getLoggedIn(req.body);
+        return res.json({ token: token });
       } else if (checkIfEmailTaken && checkIfEmailTaken) {
         throw new ExpressError(
           "Both username and email are not available",
@@ -53,12 +65,95 @@ router.get("/", async (req, res, next) => {
 });
 router.get("/:username", async (req, res, next) => {
   try {
-    const { username } = req.params;
+    const username = req.params.username.toLowerCase();
     const checkIfExist = await User.getUser(username);
     if (checkIfExist) {
       return res.json({ user: checkIfExist });
     } else {
       throw new ExpressError("This user does not exist", 404);
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+router.patch("/:username", async (req, res, next) => {
+  try {
+    const result = jsonschema.validate(req.body, userSchemaPatch);
+    for (let key in result.instance) {
+      if (!userSchemaPatch.examples[0].hasOwnProperty(key)) {
+        throw new ExpressError(`${key} is not a valid property for a job`, 400);
+      }
+    }
+    if (result.valid) {
+      const username = req.params.username.toLowerCase();
+      const checkIfExist = await User.getUser(username);
+      if (checkIfExist) {
+        if (Object.keys(req.body).length == 0) {
+          return res.json({ msg: "User unchanged", user: checkIfExist });
+        }
+        let checkIfUsernameTaken;
+        let checkIfEmailTaken;
+        if (req.body.username) {
+          checkIfUsernameTaken = await User.getUser(req.body.username);
+        }
+
+        if (req.body.email) {
+          checkIfEmailTaken = await User.getEmail(req.body.email);
+        }
+
+        if (
+          checkIfUsernameTaken &&
+          !isEqual(checkIfUsernameTaken, checkIfExist)
+        ) {
+          throw new ExpressError("Username is already taken", 409);
+        } else if (
+          checkIfEmailTaken &&
+          !isEqual(checkIfEmailTaken, checkIfExist)
+        ) {
+          throw new ExpressError("Email is already taken", 409);
+        } else {
+          if (req.body.email) req.body.email = req.body.email.toLowerCase();
+
+          if (req.body.username)
+            req.body.username = req.body.username.toLowerCase();
+          const user = await sqlForPartialUpdate(
+            "users",
+            req.body,
+            "username",
+            username
+          );
+          if (isEqual(user.query.rows[0], checkIfExist)) {
+            return res.json({
+              msg: "User unchanged",
+              user: checkIfExist,
+            });
+          }
+          return res.json({ updated_user: user.query.rows[0] });
+        }
+      } else {
+        throw new ExpressError("This user does not exist", 404);
+      }
+    } else {
+      const listOfErrors = result.errors.map((error) => error.stack);
+      const err = new ExpressError(listOfErrors, 400);
+      return next(err);
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+router.delete("/:username", async (req, res, next) => {
+  try {
+    const username = req.params.username.toLowerCase();
+    const checkIfExist = await User.getUser(username);
+    if (checkIfExist) {
+      const deleteUser = new User();
+      const deletedUser = await deleteUser.delete(username);
+      return res.json({
+        msg: `The user with username ${deletedUser.username} has been deleted`,
+      });
+    } else {
+      throw new ExpressError("This User does not exist", 404);
     }
   } catch (error) {
     next(error);

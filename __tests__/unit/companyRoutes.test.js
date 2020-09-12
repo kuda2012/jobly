@@ -141,7 +141,7 @@ describe("Company Routes Test", function () {
   describe("PATCH /companies/:handle editing a company ", () => {
     test("Should edit a company", async () => {
       let oldHandle = u1.handle;
-      u1.handle = "TEST";
+      u1.handle = "tesssst";
       delete u1.jobs;
       let response = await request(app)
         .patch(`/companies/${oldHandle}`)

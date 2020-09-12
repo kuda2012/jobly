@@ -78,7 +78,7 @@ describe("Job Routes Test", function () {
   });
 
   describe("GET /jobs/:id should get a specific job by its id", () => {
-    test("Should get a company if id is correct", async () => {
+    test("Should get a job if id is correct", async () => {
       let response = await request(app).get(`/jobs/${u1.id}`);
       u1.date_posted = response.body.job.date_posted;
       expect(response.body.job).toEqual(u1);
@@ -144,7 +144,6 @@ describe("Job Routes Test", function () {
       let oldTitle = u1.title;
       u1.title = "tEsTjOb";
       const holdId = u1.id;
-      const holdDatePosted = u1.date_posted;
       delete u1.id;
       delete u1.date_posted;
       let response = await request(app).patch(`/jobs/${holdId}`).send(u1);

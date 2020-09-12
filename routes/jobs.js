@@ -8,28 +8,54 @@ const sqlForPartialUpdate = require("../helpers/partialUpdate");
 const Job = require("../models/job");
 const jobSchema = require("../schema/jobSchema.json");
 const jobSchemaPatch = require("../schema/jobSchemaPatch.json");
+const jwt = require("jsonwebtoken");
+const { SECRET_KEY } = require("../config");
 
 router.get("/", async (req, res, next) => {
   try {
-    const jobs = await Job.getAll(req.query);
-    return res.json({ jobs: jobs });
+    const { _token } = req.body;
+    const verified = jwt.verify(_token, SECRET_KEY);
+    if (verified) {
+      const jobs = await Job.getAll(req.query);
+      return res.json({ jobs: jobs });
+    } else {
+      throw new ExpressError(
+        "You are not authorized to go here, please login first",
+        401
+      );
+    }
   } catch (error) {
+    if (error.message == "invalid token") {
+      error.status = 400;
+    }
     next(error);
   }
 });
 router.get("/:id", async (req, res, next) => {
   try {
-    const { id } = req.params;
-    if (isNaN(id)) {
-      throw new ExpressError("Please make sure id is an integer", 400);
-    }
-    const checkIfExist = await Job.getOne(id);
-    if (checkIfExist) {
-      return res.json({ job: checkIfExist });
+    const { _token } = req.body;
+    const verified = jwt.verify(_token, SECRET_KEY);
+    if (verified) {
+      const { id } = req.params;
+      if (isNaN(id)) {
+        throw new ExpressError("Please make sure job id is an integer", 400);
+      }
+      const checkIfExist = await Job.getOne(id);
+      if (checkIfExist) {
+        return res.json({ job: checkIfExist });
+      } else {
+        throw new ExpressError("This job does not exist", 404);
+      }
     } else {
-      throw new ExpressError("This job does not exist", 404);
+      throw new ExpressError(
+        "You are not authorized to go here, please login first",
+        401
+      );
     }
   } catch (error) {
+    if (error.message == "invalid token") {
+      error.status = 400;
+    }
     next(error);
   }
 });
@@ -67,7 +93,7 @@ router.patch("/:id", async (req, res, next) => {
     if (result.valid) {
       const { id } = req.params;
       if (isNaN(id)) {
-        throw new ExpressError("Please make sure id is an integer", 400);
+        throw new ExpressError("Please make sure job id is an integer", 400);
       }
       const checkIfExist = await Job.getOne(id);
       if (checkIfExist) {
@@ -97,6 +123,9 @@ router.patch("/:id", async (req, res, next) => {
 router.delete("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
+    if (isNaN(id)) {
+      throw new ExpressError("Please make sure job id is an integer", 400);
+    }
     const checkIfExist = await Job.getOne(id);
     if (checkIfExist) {
       const deleteJob = new Job();

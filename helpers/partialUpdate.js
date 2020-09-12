@@ -45,9 +45,7 @@ async function sqlForPartialUpdate(table, items, key, id) {
 
     return { query, values };
   } catch (error) {
-    if (error.code == "23505") {
-      throw new ExpressError("A company has already taken this handle", 409);
-    }
+    throw new ExpressError();
   }
 }
 

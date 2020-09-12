@@ -57,7 +57,7 @@ class Job {
     const newJob = await db.query(
       `INSERT INTO jobs (title, salary, equity, company_handle)
                                          VALUES ($1, $2, $3, $4) RETURNING *`,
-      [title, salary, equity, company_handle]
+      [title, salary, equity, company_handle.toLowerCase()]
     );
     return newJob.rows[0];
   }

@@ -12,20 +12,38 @@ const sqlForPartialUpdate = require("../helpers/partialUpdate");
 
 router.get("/", async (req, res, next) => {
   try {
-    const companies = await Company.getAll(req.query);
-    return res.json({ companies: companies });
+    const { _token } = req.body;
+    const verified = jwt.verify(_token, SECRET_KEY);
+    if (verified) {
+      const companies = await Company.getAll(req.query);
+      return res.json({ companies: companies });
+    } else {
+      throw new ExpressError(
+        "You are not authorized to go here, please login first",
+        401
+      );
+    }
   } catch (error) {
     next(error);
   }
 });
 router.get("/:handle", async (req, res, next) => {
   try {
-    const { handle } = req.params;
-    const checkIfExist = await Company.getOne(handle);
-    if (checkIfExist) {
-      return res.json({ company: checkIfExist });
+    const { _token } = req.body;
+    const verified = jwt.verify(_token, SECRET_KEY);
+    if (verified) {
+      const handle = req.params.handle.toLowerCase();
+      const checkIfExist = await Company.getOne(handle);
+      if (checkIfExist) {
+        return res.json({ company: checkIfExist });
+      } else {
+        throw new ExpressError("This company does not exist", 404);
+      }
     } else {
-      throw new ExpressError("This company does not exist", 404);
+      throw new ExpressError(
+        "You are not authorized to go here, please login first",
+        401
+      );
     }
   } catch (error) {
     next(error);
@@ -67,26 +85,38 @@ router.patch("/:handle", async (req, res, next) => {
       }
     }
     if (result.valid) {
-      const { handle } = req.params;
+      const handle = req.params.handle.toLowerCase();
       const checkIfExist = await Company.getOne(handle);
       if (checkIfExist) {
         if (Object.keys(req.body).length == 0) {
           return res.json({ msg: "Company unchanged", company: checkIfExist });
         }
-        const company = await sqlForPartialUpdate(
-          "companies",
-          req.body,
-          "handle",
-          handle
-        );
-        company.query.rows[0].jobs = checkIfExist.jobs;
-        if (isEqual(company.query.rows[0], checkIfExist)) {
-          return res.json({
-            msg: "Company unchanged",
-            company: checkIfExist,
-          });
+        let patch = true;
+        const checkForNewHandle = await Company.getOne(req.body.handle, patch);
+        if (!checkForNewHandle || isEqual(checkForNewHandle, checkIfExist)) {
+          if (req.body.handle) {
+            req.body.handle = req.body.handle.toLowerCase();
+          }
+          const company = await sqlForPartialUpdate(
+            "companies",
+            req.body,
+            "handle",
+            handle
+          );
+          company.query.rows[0].jobs = checkIfExist.jobs;
+          if (isEqual(company.query.rows[0], checkIfExist)) {
+            return res.json({
+              msg: "Company unchanged",
+              company: checkIfExist,
+            });
+          }
+          return res.json({ updated_company: company.query.rows[0] });
+        } else {
+          throw new ExpressError(
+            `A company has already taken this handle`,
+            409
+          );
         }
-        return res.json({ updated_company: company.query.rows[0] });
       } else {
         throw new ExpressError("This company does not exist", 404);
       }
@@ -101,7 +131,7 @@ router.patch("/:handle", async (req, res, next) => {
 });
 router.delete("/:handle", async (req, res, next) => {
   try {
-    const { handle } = req.params;
+    const handle = req.params.handle.toLowerCase();
     const checkIfExist = await Company.getOne(handle);
     if (checkIfExist) {
       const deleteCompany = new Company();

@@ -62,42 +62,44 @@ class Company {
     }
     return companies.rows;
   }
-  static async getOne(handle) {
+  static async getOne(handle, patch) {
     const getCompany = await db.query(
       `SELECT * FROM companies WHERE handle = $1`,
-      [handle]
+      [handle.toLowerCase()]
     );
-    if (getCompany.rows.length == 0) {
+    if (getCompany.rows.length == 0 && !patch) {
       throw new ExpressError("This company does not exist", 404);
     }
     const getCompanyJobs = await db.query(
       `SELECT * FROM jobs WHERE company_handle = $1`,
       [handle]
     );
-    getCompany.rows[0].jobs = getCompanyJobs.rows;
+    if (getCompany.rows.length != 0) {
+      getCompany.rows[0].jobs = getCompanyJobs.rows;
+    }
     return getCompany.rows[0];
   }
   async create(body) {
     const { handle, name, num_employees, description, logo_url } = body;
     const getCompany = await db.query(
       `SELECT * FROM companies WHERE handle = $1`,
-      [handle]
+      [handle.toLowerCase()]
     );
     if (getCompany.rows.length == 0) {
       const newCompany = await db.query(
         `INSERT INTO companies (handle, name, num_employees, description, logo_url)
                                          VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-        [handle, name, num_employees, description, logo_url]
+        [handle.toLowerCase(), name, num_employees, description, logo_url]
       );
       return newCompany.rows[0];
     } else {
-      throw new ExpressError("This company already exist", 409)
+      throw new ExpressError("This company already exist", 409);
     }
   }
   async delete(handle) {
     const deleteCompany = await db.query(
       `DELETE FROM companies WHERE handle = $1 RETURNING name`,
-      [handle]
+      [handle.toLowerCase()]
     );
     return deleteCompany.rows[0];
   }
