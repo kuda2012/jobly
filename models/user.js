@@ -6,7 +6,9 @@ const { BCRYPT_HASH_ROUNDS } = require("../config");
 const { SECRET_KEY } = require("../config");
 class User {
   static async getAll() {
-    const users = await db.query(`SELECT * FROM users`);
+    const users = await db.query(
+      `SELECT username, first_name, last_name, email, photo_url, is_admin FROM users`
+    );
     return users.rows;
   }
 
@@ -19,7 +21,7 @@ class User {
       `SELECT password from users WHERE username =$1`,
       [username]
     );
-    if (getPassword.rows[0].password) {
+    if (getPassword.rows[0]) {
       const passwordCorrect = await bcrypt.compare(
         password,
         getPassword.rows[0].password
@@ -73,6 +75,12 @@ class User {
       [email.toLowerCase()]
     );
     return getEmail.rows[0];
+  }
+  static async getUserAllColumns(username) {
+    const getUser = await db.query(`SELECT * FROM users WHERE username = $1`, [
+      username.toLowerCase(),
+    ]);
+    return getUser.rows[0];
   }
   async delete(username) {
     const deleteUser = await db.query(
