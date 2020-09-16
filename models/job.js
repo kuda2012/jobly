@@ -52,7 +52,7 @@ class Job {
     const getJob = await db.query(`SELECT * FROM jobs WHERE id = $1`, [id]);
     return getJob.rows[0];
   }
-  async create(body) {
+  static async create(body) {
     const { title, salary, equity, company_handle } = body;
     const newJob = await db.query(
       `INSERT INTO jobs (title, salary, equity, company_handle)
@@ -61,7 +61,7 @@ class Job {
     );
     return newJob.rows[0];
   }
-  async delete(id) {
+  static async delete(id) {
     const deleteJob = await db.query(
       `DELETE FROM jobs WHERE id = $1 RETURNING id, title`,
       [id]

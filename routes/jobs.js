@@ -10,106 +10,45 @@ const jobSchema = require("../schema/jobSchema.json");
 const jobSchemaPatch = require("../schema/jobSchemaPatch.json");
 const jwt = require("jsonwebtoken");
 const { SECRET_KEY } = require("../config");
+const {
+  isVerified,
+  checkId,
+  checkJobExistenceGet,
+  checkCompanyExistence,
+  noExtraProperties,
+} = require("../middleware/jobsMiddleware");
+router.get("/", isVerified, async (req, res, next) => {
+  try {
+    const jobs = await Job.getAll(req.query);
+    return res.json({ jobs: jobs });
+  } catch (error) {
+    next(error);
+  }
+});
+router.get(
+  "/:id",
+  [isVerified, checkId, checkJobExistenceGet],
+  async (req, res, next) => {
+    try {
+      return res.json({ job: req.initial_job });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
-router.get("/", async (req, res, next) => {
-  try {
-    const { _token } = req.body;
-    const verified = jwt.verify(_token, SECRET_KEY);
-    if (verified) {
-      const jobs = await Job.getAll(req.query);
-      return res.json({ jobs: jobs });
-    } else {
-      throw new ExpressError(
-        "You are not authorized to go here, please login first",
-        401
-      );
+router.post(
+  "/",
+  [isVerified, checkCompanyExistence, noExtraProperties],
+  async (req, res, next) => {
+    try {
+      const job = await Job.create(req.body);
+      return res.json({ job });
+    } catch (error) {
+      next(error);
     }
-  } catch (error) {
-    if (
-      error.message == "invalid token" ||
-      error.message == "invalid signature"
-    ) {
-      error.status = 400;
-    }
-    next(error);
   }
-});
-router.get("/:id", async (req, res, next) => {
-  try {
-    const { _token } = req.body;
-    const verified = jwt.verify(_token, SECRET_KEY);
-    if (verified) {
-      const { id } = req.params;
-      if (isNaN(id)) {
-        throw new ExpressError("Please make sure job id is an integer", 400);
-      }
-      const checkIfExist = await Job.getOne(id);
-      if (checkIfExist) {
-        return res.json({ job: checkIfExist });
-      } else {
-        throw new ExpressError("This job does not exist", 404);
-      }
-    } else {
-      throw new ExpressError(
-        "You are not authorized to go here, please login first",
-        401
-      );
-    }
-  } catch (error) {
-    if (
-      error.message == "invalid token" ||
-      error.message == "invalid signature"
-    ) {
-      error.status = 400;
-    }
-    next(error);
-  }
-});
-
-router.post("/", async (req, res, next) => {
-  try {
-    const { _token } = req.body;
-    const verified = jwt.verify(_token, SECRET_KEY);
-    if (verified.is_admin) {
-      const result = jsonschema.validate(req.body, jobSchema);
-      for (let key in result.instance) {
-        if (!jobSchema.examples[0].hasOwnProperty(key) && key != "_token") {
-          throw new ExpressError(
-            `${key} is not a valid property for a job`,
-            400
-          );
-        }
-      }
-      if (result.valid) {
-        const newJob = new Job();
-        const job = await newJob.create(req.body);
-        return res.json({ job });
-      } else {
-        const listOfErrors = result.errors.map((error) => error.stack);
-        const err = new ExpressError(listOfErrors, 400);
-        return next(err);
-      }
-    } else {
-      throw new ExpressError(
-        "You are not authorized to go here, please login first",
-        401
-      );
-    }
-  } catch (error) {
-    if (
-      error.message == "invalid token" ||
-      error.message == "invalid signature"
-    ) {
-      error.status = 400;
-    }
-    if (error.code == "23503") {
-      error.message =
-        "The company_handle entered is not an existing handle for a company";
-      error.status = 400;
-    }
-    next(error);
-  }
-});
+);
 
 router.patch("/:id", async (req, res, next) => {
   try {

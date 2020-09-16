@@ -62,12 +62,12 @@ class Company {
     }
     return companies.rows;
   }
-  static async getOne(handle, patch) {
+  static async getOne(handle, editing) {
     const getCompany = await db.query(
       `SELECT * FROM companies WHERE handle = $1`,
       [handle.toLowerCase()]
     );
-    if (getCompany.rows.length == 0 && !patch) {
+    if (getCompany.rows.length == 0 && !editing) {
       throw new ExpressError("This company does not exist", 404);
     }
     const getCompanyJobs = await db.query(
@@ -79,7 +79,7 @@ class Company {
     }
     return getCompany.rows[0];
   }
-  async create(body) {
+  static async create(body) {
     const { handle, name, num_employees, description, logo_url } = body;
     const getCompany = await db.query(
       `SELECT * FROM companies WHERE handle = $1`,
@@ -96,7 +96,7 @@ class Company {
       throw new ExpressError("This company already exist", 409);
     }
   }
-  async delete(handle) {
+  static async delete(handle) {
     const deleteCompany = await db.query(
       `DELETE FROM companies WHERE handle = $1 RETURNING name`,
       [handle.toLowerCase()]
