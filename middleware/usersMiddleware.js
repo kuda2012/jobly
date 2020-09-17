@@ -11,15 +11,9 @@ function isVerified(req, res, next) {
     const { _token } = req.body;
     const verified = jwt.verify(_token, SECRET_KEY);
     req.username = verified.username;
-    if (verified && req.method != "DELETE" && req.method != "PATCH") {
+    req.is_admin = verified.is_admin;
+    if (verified) {
       return next();
-    } else if (verified.is_admin) {
-      return next();
-    } else if (verified.is_admin == false) {
-      throw new ExpressError(
-        "You are not authorized to do that. Admins only.",
-        401
-      );
     } else {
       throw new ExpressError(
         "You are not authorized to go here, please login first",
@@ -46,6 +40,12 @@ async function checkUserExistenceGet(req, res, next) {
           throw new ExpressError(
             "You are not authorized to do that to this account",
             401
+          );
+        }
+        if (req.is_admin != checkIfExist.is_admin) {
+          throw new ExpressError(
+            "Token outdated. Login again to get new token",
+            400
           );
         }
       }

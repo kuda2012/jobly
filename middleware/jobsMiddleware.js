@@ -38,12 +38,6 @@ function isVerified(req, res, next) {
     ) {
       error.status = 400;
     }
-    if (
-      error.message == "invalid token" ||
-      error.message == "invalid signature"
-    ) {
-      error.status = 400;
-    }
     if (error.code == "23503") {
       error.message =
         "The company_handle entered is not an existing handle for a company";
