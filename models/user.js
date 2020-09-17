@@ -17,9 +17,10 @@ class User {
     if (!username || !password) {
       throw new ExpressError("Must enter a username and password", 400);
     }
+
     const getPassword = await db.query(
       `SELECT password from users WHERE username =$1`,
-      [username]
+      [username.toLowerCase()]
     );
     if (getPassword.rows[0]) {
       const passwordCorrect = await bcrypt.compare(
@@ -36,7 +37,7 @@ class User {
     }
   }
 
-  async create(body) {
+  static async create(body) {
     const {
       username,
       password,
@@ -82,7 +83,7 @@ class User {
     ]);
     return getUser.rows[0];
   }
-  async delete(username) {
+  static async delete(username) {
     const deleteUser = await db.query(
       `DELETE FROM users WHERE username = $1 RETURNING username`,
       [username.toLowerCase()]

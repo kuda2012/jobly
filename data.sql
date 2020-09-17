@@ -2,6 +2,7 @@
 
 DROP TABLE IF EXISTS jobs;
 DROP TABLE IF EXISTS companies;
+DROP TABLE IF EXISTS users;
 
 
 CREATE TABLE companies (
@@ -30,7 +31,7 @@ CREATE TABLE users (
     last_name TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE,
     photo_url text,
-    is_admin BOOLEAN DEFAULT FALSE
+    is_admin BOOLEAN  NOT NULL DEFAULT FALSE
 );
 
 

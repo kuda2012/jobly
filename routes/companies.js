@@ -1,13 +1,8 @@
 const express = require("express");
 const router = new express.Router();
 const ExpressError = require("../helpers/expressError");
-// const jsonschema = require("jsonschema");
-// const companySchema = require("../schema/companySchema.json");
-// const companySchemaPatch = require("../schema/companySchemaPatch.json");
 const Company = require("../models/company");
 const { isEqual } = require("lodash");
-const jwt = require("jsonwebtoken");
-const { SECRET_KEY } = require("../config");
 const {
   isVerified,
   checkCompanyExistenceGet,

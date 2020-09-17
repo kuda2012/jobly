@@ -10,10 +10,20 @@ function isVerified(req, res, next) {
   try {
     const { _token } = req.body;
     const verified = jwt.verify(_token, SECRET_KEY);
-    if (verified) {
+    if (
+      verified &&
+      req.method != "POST" &&
+      req.method != "PATCH" &&
+      req.method != "POST"
+    ) {
       return next();
     } else if (verified.is_admin) {
       return next();
+    } else if (verified.is_admin == false) {
+      throw new ExpressError(
+        "You are not authorized to do that. Admins only.",
+        401
+      );
     } else {
       throw new ExpressError(
         "You are not authorized to go here, please login first",
@@ -34,7 +44,9 @@ function isVerified(req, res, next) {
 async function checkCompanyExistenceGet(req, res, next) {
   try {
     let handle = req.params.handle;
-    handle = handle.toLowerCase();
+    if (handle) {
+      handle = handle.toLowerCase();
+    }
     const checkIfExist = await Company.getOne(handle);
     if (checkIfExist) {
       req.initial_company = checkIfExist;
@@ -48,8 +60,17 @@ async function checkCompanyExistenceGet(req, res, next) {
 }
 async function checkCompanyExistencePost(req, res, next) {
   try {
+    if (Object.keys(req.body).length == 1) {
+      return res.json({
+        msg: "Company unchanged",
+        company: req.initial_company,
+      });
+    }
     let handle = req.body.handle;
-    handle = handle.toLowerCase();
+    if (handle) {
+      handle = handle.toLowerCase();
+    }
+
     const checkIfExist = await Company.getOne(handle, true);
     if (checkIfExist) {
       req.other_company = checkIfExist;

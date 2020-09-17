@@ -11,10 +11,20 @@ function isVerified(req, res, next) {
   try {
     const { _token } = req.body;
     const verified = jwt.verify(_token, SECRET_KEY);
-    if (verified) {
+    if (
+      verified &&
+      req.method != "POST" &&
+      req.method != "PATCH" &&
+      req.method != "POST"
+    ) {
       return next();
     } else if (verified.is_admin) {
       return next();
+    } else if (verified.is_admin == false) {
+      throw new ExpressError(
+        "You are not authorized to do that. Admins only.",
+        401
+      );
     } else {
       throw new ExpressError(
         "You are not authorized to go here, please login first",
@@ -43,7 +53,7 @@ function isVerified(req, res, next) {
   }
 }
 
-async function checkJobExistenceGet(req, res, next) {
+async function checkJobExistence(req, res, next) {
   try {
     let id = req.params.id;
     const checkIfExist = await Job.getOne(id);
@@ -57,26 +67,13 @@ async function checkJobExistenceGet(req, res, next) {
     next(error);
   }
 }
-async function checkJobExistencePost(req, res, next) {
-  try {
-    let id = req.body.id;
-    const checkIfExist = await Job.getOne(id);
-    if (checkIfExist) {
-      req.other_job = checkIfExist;
-      return next();
-    } else if (req.method == "POST" && !checkIfExist) {
-      return next();
-    } else {
-      throw new ExpressError("This job does not exist", 404);
-    }
-  } catch (error) {
-    next(error);
-  }
-}
+
 async function checkCompanyExistence(req, res, next) {
   try {
     let handle = req.body.company_handle;
-    handle = handle.toLowerCase();
+    if (handle) {
+      handle = handle.toLowerCase();
+    }
     const checkIfExist = await Company.getOne(handle, true);
     if (checkIfExist) {
       return next();
@@ -104,13 +101,13 @@ async function noExtraProperties(req, res, next) {
       if (!jobSchema.examples[0].hasOwnProperty(key) && key != "_token") {
         throw new ExpressError(`${key} is not a valid property for a job`, 400);
       }
-      if (result.valid) {
-        return next();
-      } else {
-        const listOfErrors = result.errors.map((error) => error.stack);
-        const err = new ExpressError(listOfErrors, 400);
-        return next(err);
-      }
+    }
+    if (result.valid) {
+      return next();
+    } else {
+      const listOfErrors = result.errors.map((error) => error.stack);
+      const err = new ExpressError(listOfErrors, 400);
+      return next(err);
     }
   } catch (error) {
     return next(error);
@@ -125,8 +122,7 @@ function checkId(req, res, next) {
 }
 module.exports = {
   isVerified,
-  checkJobExistenceGet,
-  checkJobExistencePost,
+  checkJobExistence,
   checkCompanyExistence,
   noExtraProperties,
   checkId,
